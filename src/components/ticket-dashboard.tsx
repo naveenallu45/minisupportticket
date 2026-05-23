@@ -191,6 +191,13 @@ function formatRelativeDate(value: string) {
   return `${formatDistanceToNow(new Date(value), { addSuffix: true })}`;
 }
 
+function formatExactDateTime(value: string) {
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value));
+}
+
 const fadeUp = {
   initial: { opacity: 0, y: 16 },
   animate: { opacity: 1, y: 0 },
@@ -945,7 +952,7 @@ export function TicketDashboard({ user }: DashboardProps) {
                 <div className="pb-5">
                   <p className="font-medium">{entry.message}</p>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    {entry.actorName} · {formatRelativeDate(entry.createdAt)}
+                    {entry.actorName} · {formatExactDateTime(entry.createdAt)}
                   </p>
                 </div>
               </div>
