@@ -197,6 +197,10 @@ function formatExactDateTime(value: string) {
   }).format(new Date(value));
 }
 
+function formatTicketId(value: string) {
+  return `#${value.slice(-8).toUpperCase()}`;
+}
+
 const fadeUp = {
   initial: { opacity: 0, y: 16 },
   animate: { opacity: 1, y: 0 },
@@ -438,7 +442,8 @@ export function TicketDashboard({ user }: DashboardProps) {
     return Math.round((counts.closed / counts.total) * 100);
   }, [counts.closed, counts.total]);
 
-  const metricsLoading = loading && tickets.length === 0 && resultCount === 0 && !error;
+  const initialTableLoading = loading && tickets.length === 0;
+  const metricsLoading = initialTableLoading && resultCount === 0 && !error;
   const metricCards = [
     {
       label: "Total Tickets",
@@ -664,7 +669,7 @@ export function TicketDashboard({ user }: DashboardProps) {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {loading ? (
+                  {initialTableLoading ? (
                     Array.from({ length: 5 }).map((_, index) => (
                       <TableRow key={index}>
                         <TableCell colSpan={6}>
@@ -708,6 +713,9 @@ export function TicketDashboard({ user }: DashboardProps) {
                             className="text-left transition-opacity hover:opacity-70"
                             onClick={() => setTimelineTicket(ticket)}
                           >
+                            <p className="mb-1 font-mono text-xs uppercase tracking-wide text-muted-foreground">
+                              {formatTicketId(ticket._id)}
+                            </p>
                             <p className="font-medium">{ticket.title}</p>
                             <p className="mt-1 line-clamp-1 max-w-lg text-sm text-muted-foreground">
                               {ticket.description}
@@ -919,10 +927,62 @@ export function TicketDashboard({ user }: DashboardProps) {
           <SheetHeader className="shrink-0">
             <SheetTitle>{timelineTicket?.title ?? "Activity timeline"}</SheetTitle>
             <SheetDescription>
-              Every saved change is kept with a timestamp.
+              Review the full ticket details and saved changes.
             </SheetDescription>
           </SheetHeader>
           <div className="mt-6 min-h-0 flex-1 space-y-5 overflow-y-auto pr-2">
+            {timelineTicket ? (
+              <div className="space-y-4 rounded-2xl border border-black/10 bg-muted/30 p-4">
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Ticket ID
+                  </p>
+                  <p className="mt-1 break-all font-mono text-sm">
+                    {timelineTicket._id}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Full description
+                  </p>
+                  <p className="mt-1 whitespace-pre-wrap text-sm leading-6">
+                    {timelineTicket.description}
+                  </p>
+                </div>
+                <div className="grid gap-3 text-sm sm:grid-cols-2">
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      Category
+                    </p>
+                    <p className="mt-1">{timelineTicket.category}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      Assigned
+                    </p>
+                    <p className="mt-1">{timelineTicket.assignedPerson}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      Priority
+                    </p>
+                    <p className="mt-1">{timelineTicket.priority}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      Status
+                    </p>
+                    <p className="mt-1">{timelineTicket.status}</p>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+            <div>
+              <h3 className="text-sm font-medium">Activity timeline</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Every saved change is kept with a timestamp.
+              </p>
+            </div>
             {timelineTicket?.activity.map((entry, index) => (
               <div key={`${entry.createdAt}-${index}`} className="flex gap-3">
                 <div className="flex flex-col items-center">
