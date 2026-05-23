@@ -22,26 +22,8 @@ type TicketQuery = {
   $or?: { [key: string]: RegExp }[];
 };
 
-const simulationModes = ["slow", "failure", "empty", "duplicate"] as const;
-const simulationChance = 0.25;
-
 function escapeRegex(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-async function maybeSimulateRefreshCondition() {
-  if (Math.random() > simulationChance) {
-    return null;
-  }
-
-  const mode =
-    simulationModes[Math.floor(Math.random() * simulationModes.length)];
-
-  if (mode === "slow") {
-    await new Promise((resolve) => setTimeout(resolve, 1600));
-  }
-
-  return mode;
 }
 
 export async function GET(request: NextRequest) {
@@ -50,20 +32,6 @@ export async function GET(request: NextRequest) {
 
     if (!session?.user?.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
-
-    const simulation = request.nextUrl.searchParams.get("simulate") === "true"
-      ? await maybeSimulateRefreshCondition()
-      : null;
-
-    if (simulation === "failure") {
-      return NextResponse.json(
-        {
-          message: "The ticket service is temporarily unavailable.",
-          simulation,
-        },
-        { status: 503 }
-      );
     }
 
     await connectToDatabase();
@@ -116,29 +84,20 @@ export async function GET(request: NextRequest) {
         Ticket.countDocuments({ ...countBase, status: "Closed" }),
       ]);
 
-    const serializedTickets =
-      simulation === "empty" ? [] : tickets.map(serializeTicket);
-    const records =
-      simulation === "duplicate"
-        ? [...serializedTickets, ...serializedTickets.slice(0, 2)]
-        : serializedTickets;
-
     return NextResponse.json({
-      tickets: records,
+      tickets: tickets.map(serializeTicket),
       counts: {
-        total: simulation === "empty" ? 0 : total,
-        open: simulation === "empty" ? 0 : open,
-        inProgress: simulation === "empty" ? 0 : inProgress,
-        closed: simulation === "empty" ? 0 : closed,
+        total,
+        open,
+        inProgress,
+        closed,
       },
       pagination: {
         page,
         limit,
-        total: simulation === "empty" ? 0 : totalFiltered,
-        pages:
-          simulation === "empty" ? 1 : Math.max(Math.ceil(totalFiltered / limit), 1),
+        total: totalFiltered,
+        pages: Math.max(Math.ceil(totalFiltered / limit), 1),
       },
-      simulation,
     });
   } catch (error) {
     console.error("Tickets fetch failed", error);

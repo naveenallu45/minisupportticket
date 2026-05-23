@@ -138,7 +138,6 @@ type TicketResponse = {
     total: number;
     pages: number;
   };
-  simulation?: "slow" | "failure" | "empty" | "duplicate" | null;
   message?: string;
 };
 
@@ -231,7 +230,6 @@ export function TicketDashboard({ user }: DashboardProps) {
   const [mutatingId, setMutatingId] = useState<string | null>(null);
   const [errorTitle, setErrorTitle] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [simulation, setSimulation] = useState<TicketResponse["simulation"]>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTicket, setEditingTicket] = useState<Ticket | null>(null);
   const [deleteTicket, setDeleteTicket] = useState<Ticket | null>(null);
@@ -275,7 +273,6 @@ export function TicketDashboard({ user }: DashboardProps) {
       const params = new URLSearchParams({
         page: String(page),
         limit: "8",
-        simulate: "true",
       });
 
       if (debouncedSearch) {
@@ -297,12 +294,7 @@ export function TicketDashboard({ user }: DashboardProps) {
         const payload = (await response.json()) as TicketResponse;
 
         if (!response.ok) {
-          setSimulation(payload.simulation);
-          setErrorTitle(
-            payload.simulation === "failure"
-              ? "Ticket service unavailable"
-              : "Tickets could not be loaded"
-          );
+          setErrorTitle("Tickets could not be loaded");
           setError(payload.message ?? "Please try again in a moment.");
           setTickets([]);
           return;
@@ -312,7 +304,6 @@ export function TicketDashboard({ user }: DashboardProps) {
         setCounts(payload.counts);
         setPageCount(payload.pagination.pages);
         setResultCount(payload.pagination.total);
-        setSimulation(payload.simulation);
       } catch (fetchError) {
         if (controller.signal.aborted) {
           return;
@@ -447,6 +438,7 @@ export function TicketDashboard({ user }: DashboardProps) {
     return Math.round((counts.closed / counts.total) * 100);
   }, [counts.closed, counts.total]);
 
+  const metricsLoading = loading && tickets.length === 0 && resultCount === 0 && !error;
   const metricCards = [
     {
       label: "Total Tickets",
@@ -534,8 +526,16 @@ export function TicketDashboard({ user }: DashboardProps) {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-semibold">{card.value}</div>
-                <p className="mt-1 text-sm text-muted-foreground">{card.copy}</p>
+                {metricsLoading ? (
+                  <Skeleton className="h-9 w-16" />
+                ) : (
+                  <div className="text-3xl font-semibold">{card.value}</div>
+                )}
+                {metricsLoading ? (
+                  <Skeleton className="mt-2 h-4 w-32" />
+                ) : (
+                  <p className="mt-1 text-sm text-muted-foreground">{card.copy}</p>
+                )}
               </CardContent>
             </Card>
             </motion.div>
@@ -683,31 +683,14 @@ export function TicketDashboard({ user }: DashboardProps) {
                           <div className="mb-4 flex size-14 items-center justify-center rounded-2xl bg-black text-white">
                             <TicketIcon className="size-6" />
                           </div>
-                          <p className="font-medium">
-                            {simulation === "empty"
-                              ? "API returned an empty response"
-                              : "No tickets found"}
-                          </p>
+                          <p className="font-medium">No tickets found</p>
                           <p className="mt-1 max-w-md text-sm text-muted-foreground">
-                            {simulation === "empty"
-                              ? "Your saved tickets are still in MongoDB. This refresh is showing the simulated empty-response condition."
-                              : "Create a ticket or adjust your search and filters."}
+                            Create a ticket or adjust your search and filters.
                           </p>
-                          {simulation === "empty" ? (
-                            <Button
-                              className="mt-5"
-                              variant="outline"
-                              onClick={refreshTickets}
-                            >
-                              <RefreshCw className="size-4" />
-                              Refresh again
-                            </Button>
-                          ) : (
-                            <Button className="mt-5 bg-black text-white hover:bg-black/90" onClick={openCreateDialog}>
-                              <Plus className="size-4" />
-                              New ticket
-                            </Button>
-                          )}
+                          <Button className="mt-5 bg-black text-white hover:bg-black/90" onClick={openCreateDialog}>
+                            <Plus className="size-4" />
+                            New ticket
+                          </Button>
                         </motion.div>
                       </TableCell>
                     </TableRow>
@@ -806,7 +789,6 @@ export function TicketDashboard({ user }: DashboardProps) {
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm text-muted-foreground">
                 Page {Math.max(page, 1)} of {pageCount}
-                {simulation ? ` · handled ${simulation} response` : null}
               </p>
               <div className="flex gap-2">
                 <Button
