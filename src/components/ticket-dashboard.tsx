@@ -20,7 +20,6 @@ import {
 } from "lucide-react";
 import { useForm, useWatch } from "react-hook-form";
 import { motion, AnimatePresence } from "framer-motion";
-import { io } from "socket.io-client";
 import { toast } from "sonner";
 import { z } from "zod";
 import {
@@ -153,13 +152,6 @@ type DashboardProps = {
   };
 };
 
-type TicketRealtimePayload = {
-  ticketId: string;
-  actorId: string;
-  message: string;
-  at: string;
-};
-
 const blankTicket: TicketFormValues = {
   title: "",
   description: "",
@@ -238,7 +230,6 @@ export function TicketDashboard({ user }: DashboardProps) {
   const [deleteTicket, setDeleteTicket] = useState<Ticket | null>(null);
   const [timelineTicket, setTimelineTicket] = useState<Ticket | null>(null);
   const [commandOpen, setCommandOpen] = useState(false);
-  const [liveConnected, setLiveConnected] = useState(false);
 
   const {
     register,
@@ -265,33 +256,6 @@ export function TicketDashboard({ user }: DashboardProps) {
 
     return () => window.clearTimeout(timer);
   }, [search]);
-
-  useEffect(() => {
-    const socket = io({
-      path: "/api/socket",
-      transports: ["websocket", "polling"],
-    });
-
-    const handleTicketEvent = (payload: TicketRealtimePayload) => {
-      if (payload.actorId !== user.id) {
-        toast.message(payload.message, {
-          description: "Dashboard updated in realtime.",
-        });
-      }
-
-      refreshTickets();
-    };
-
-    socket.on("connect", () => setLiveConnected(true));
-    socket.on("disconnect", () => setLiveConnected(false));
-    socket.on("ticket:created", handleTicketEvent);
-    socket.on("ticket:updated", handleTicketEvent);
-    socket.on("ticket:deleted", handleTicketEvent);
-
-    return () => {
-      socket.disconnect();
-    };
-  }, [refreshTickets, user.id]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -529,15 +493,6 @@ export function TicketDashboard({ user }: DashboardProps) {
               <CommandIcon className="size-4" />
               Quick actions
             </Button>
-            <div className="hidden items-center gap-2 rounded-full border border-black/10 px-3 py-2 text-sm text-muted-foreground sm:flex">
-              <span
-                className={cn(
-                  "size-2 rounded-full",
-                  liveConnected ? "bg-black" : "bg-muted-foreground/40"
-                )}
-              />
-              {liveConnected ? "Live" : "Offline"}
-            </div>
             <Avatar>
               <AvatarFallback>{initials(user.name, user.email)}</AvatarFallback>
             </Avatar>

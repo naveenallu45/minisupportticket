@@ -10,7 +10,6 @@ import {
   type TicketPriority,
   type TicketStatus,
 } from "@/lib/ticket-constants";
-import { emitTicketEvent } from "@/lib/realtime";
 import { serializeTicket } from "@/lib/ticket-serializers";
 import Ticket from "@/models/Ticket";
 
@@ -183,13 +182,6 @@ export async function POST(request: Request) {
       ],
     });
     const serializedTicket = serializeTicket(ticket.toObject());
-
-    emitTicketEvent("ticket:created", {
-      ticketId: serializedTicket._id,
-      actorId: session.user.id,
-      message: "Ticket created",
-      at: new Date().toISOString(),
-    });
 
     return NextResponse.json(
       { ticket: serializedTicket },

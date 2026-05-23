@@ -2,7 +2,6 @@ import { Types } from "mongoose";
 import { NextResponse } from "next/server";
 import { getCurrentSession } from "@/auth";
 import { connectToDatabase } from "@/lib/db";
-import { emitTicketEvent } from "@/lib/realtime";
 import {
   normalizeTicketDisplayFields,
   ticketUpdateSchema,
@@ -92,16 +91,6 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     await ticket.save();
     const serializedTicket = serializeTicket(ticket.toObject());
 
-    emitTicketEvent("ticket:updated", {
-      ticketId: serializedTicket._id,
-      actorId: session.user.id,
-      message:
-        activityMessages.length > 0
-          ? activityMessages[activityMessages.length - 1]
-          : "Ticket updated",
-      at: new Date().toISOString(),
-    });
-
     return NextResponse.json({ ticket: serializedTicket });
   } catch (error) {
     console.error("Ticket update failed", error);
@@ -137,13 +126,6 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
     if (!deletedTicket) {
       return NextResponse.json({ message: "Ticket not found." }, { status: 404 });
     }
-
-    emitTicketEvent("ticket:deleted", {
-      ticketId: deletedTicket._id.toString(),
-      actorId: session.user.id,
-      message: "Ticket deleted",
-      at: new Date().toISOString(),
-    });
 
     return NextResponse.json({ message: "Ticket deleted." });
   } catch (error) {
