@@ -20,7 +20,7 @@ export function capitalizeFirstLetter(value: string) {
 export function normalizeTicketDisplayFields<T extends Record<string, unknown>>(
   values: T
 ) {
-  const normalized = { ...values };
+  const normalized: Record<string, unknown> = { ...values };
 
   for (const field of ticketDisplayFields) {
     const value = normalized[field];
@@ -30,7 +30,7 @@ export function normalizeTicketDisplayFields<T extends Record<string, unknown>>(
     }
   }
 
-  return normalized;
+  return normalized as T;
 }
 
 export const ticketSchema = z.object({
